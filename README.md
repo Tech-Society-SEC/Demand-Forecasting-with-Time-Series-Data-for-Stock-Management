@@ -16,7 +16,7 @@ The application ingests historical sales data along with causal factors like pro
 - [Collected Datasets (Click)](https://github.com/Tech-Society-SEC/Demand-Forecasting-with-Time-Series-Data-for-Stock-Management/tree/Demand-Insight/Demand-Insight/backend/datasets)
 
 - [Project Workflow](https://github.com/Tech-Society-SEC/Demand-Forecasting-with-Time-Series-Data-for-Stock-Management/tree/Demand-Insight/Project%20Workflow.docx)
-- 
+  
 ### Individual Contributions
 S Mohamed Ahsan: 
 - Authored the comprehensive 'Research and Project Flow' document, defining the system architecture, objectives, and methodology.
