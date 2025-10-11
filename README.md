@@ -1,4 +1,7 @@
 # Demand-Forecasting-with-Time-Series-Data-for-Stock-Management
+This project is an AI-powered system designed to automate demand forecasting and optimize inventory levels. It addresses the core challenges of manual stock planning—such as overstocking and stockouts—by leveraging time-series analysis and machine learning.
+
+The application ingests historical sales data along with causal factors like promotions and holidays, generates precise SKU-level forecasts, and provides actionable reorder recommendations through an interactive dashboard.
 
 ## Summary of Work 
 ### Week 1 : 11 OCT 2025
@@ -10,8 +13,10 @@
 <img width="1883" height="897" alt="Screenshot 2025-10-11 172842" src="https://github.com/user-attachments/assets/c8bfb718-cfa7-49f3-8410-26fbec940b19" />
 <img width="1882" height="899" alt="Screenshot 2025-10-11 172851" src="https://github.com/user-attachments/assets/704d4cff-b500-40df-81e3-38fab7299af0" />
 
-[Collected Datasets (Click)](https://github.com/Tech-Society-SEC/Demand-Forecasting-with-Time-Series-Data-for-Stock-Management/tree/Demand-Insight/Demand-Insight/backend/datasets)
-[Project Workflow](https://github.com/Tech-Society-SEC/Demand-Forecasting-with-Time-Series-Data-for-Stock-Management/tree/Demand-Insight/Project%20Workflow.docx)
+- [Collected Datasets (Click)](https://github.com/Tech-Society-SEC/Demand-Forecasting-with-Time-Series-Data-for-Stock-Management/tree/Demand-Insight/Demand-Insight/backend/datasets)
+
+- [Project Workflow](https://github.com/Tech-Society-SEC/Demand-Forecasting-with-Time-Series-Data-for-Stock-Management/tree/Demand-Insight/Project%20Workflow.docx)
+- 
 ### Individual Contributions
 S Mohamed Ahsan: 
 - Authored the comprehensive 'Research and Project Flow' document, defining the system architecture, objectives, and methodology.
