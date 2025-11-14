@@ -1,23 +1,23 @@
-import { useState, useEffect } from "react"; // MODIFIED
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-// import { mockRecommendations } from "@/lib/mockData"; // <-- 1. REMOVED MOCK DATA
 import {
   CheckCircle,
   XCircle,
   AlertTriangle,
   Package,
   Calendar,
-  BrainCircuit, // For our test card
-  Loader2, // ADDED for loading state
+  BrainCircuit,
+  Loader2,
+  TrendingUp,
+  Target,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-// 2. ADDED A TYPE for our new recommendation data
-// This should match the JSON from mockData.ts and our new Python API
 interface Recommendation {
   skuId: string;
   skuName: string;
@@ -27,37 +27,37 @@ interface Recommendation {
   leadTime: number;
   priority: "high" | "medium" | "low";
   estimatedStockoutDate?: string;
+  forecastAccuracy?: number;
+  modelUsed?: string;
+  forecastedDemand7d?: number;
+  forecastedDemand14d?: number;
+  forecastedDemand30d?: number;
 }
 
 export default function Reorder() {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // --- API Test Card State ---
   const [apiResult, setApiResult] = useState<any>(null);
   const [isApiTestLoading, setIsApiTestLoading] = useState(false);
   const [productId, setProductId] = useState("P0001");
   const [storeId, setStoreId] = useState("S001");
   const [leadTime, setLeadTime] = useState("7");
 
-  // --- 3. ADDED NEW STATE for REAL data ---
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [isPageLoading, setIsPageLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  // ------------------------------------------
-
-  // --- 4. ADDED useEffect to fetch REAL data on page load ---
   useEffect(() => {
     const fetchRecommendations = async () => {
       setIsPageLoading(true);
       setError(null);
       try {
-        // Call our new Python endpoint
         const response = await fetch("http://127.0.0.1:5000/api/all_recommendations");
         if (!response.ok) {
           throw new Error("Failed to fetch recommendations from the backend.");
         }
         const data: Recommendation[] = await response.json();
         setRecommendations(data);
+        toast.success(`Loaded ${data.length} recommendations with AI forecasting`);
       } catch (err: any) {
         setError(err.message);
         toast.error(err.message);
@@ -67,10 +67,8 @@ export default function Reorder() {
     };
 
     fetchRecommendations();
-  }, []); // The empty array [] means this runs once when the page loads
-  // ---------------------------------------------------------
+  }, []);
 
-  // 5. MODIFIED activeRecommendations to use REAL state
   const activeRecommendations = recommendations.filter((rec) => !dismissedIds.has(rec.skuId));
 
   const handleAcknowledge = (skuId: string, skuName: string) => {
@@ -83,7 +81,6 @@ export default function Reorder() {
     toast.info(`Recommendation dismissed for ${skuName}`);
   };
 
-  // --- API Test Card Function (no change) ---
   const handleCalculateRop = async () => {
     setIsApiTestLoading(true);
     setApiResult(null);
@@ -106,17 +103,26 @@ export default function Reorder() {
     }
   };
 
+  const avgForecastAccuracy = activeRecommendations.length > 0
+    ? (activeRecommendations.reduce((acc, r) => acc + (r.forecastAccuracy || 0), 0) / activeRecommendations.length).toFixed(1)
+    : "N/A";
+
+  const modelDistribution = activeRecommendations.reduce((acc, r) => {
+    const model = r.modelUsed || "unknown";
+    acc[model] = (acc[model] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Reorder Recommendations</h1>
         <p className="text-muted-foreground mt-1">
-          Review and action prioritized reorder suggestions
+          AI-powered demand forecasting with time series models (SARIMA & Exponential Smoothing)
         </p>
       </div>
 
-      {/* Summary Cards (now use real data) */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">High Priority</CardTitle>
@@ -124,7 +130,6 @@ export default function Reorder() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">
-              {/* 6. This now counts REAL data */}
               {isPageLoading ? (
                 <Loader2 className="h-6 w-6 animate-spin" />
               ) : (
@@ -154,7 +159,20 @@ export default function Reorder() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Recommended Units</CardTitle>
+            <CardTitle className="text-sm font-medium">Avg Forecast Accuracy</CardTitle>
+            <Target className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">
+              {isPageLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : `${avgForecastAccuracy}%`}
+            </div>
+            <p className="text-xs text-muted-foreground">Model confidence score</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Units to Order</CardTitle>
             <Package className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
@@ -170,15 +188,39 @@ export default function Reorder() {
         </Card>
       </div>
 
-      {/* --- API Test Card (no change, still good for testing) --- */}
+      {!isPageLoading && activeRecommendations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Forecasting Model Performance
+            </CardTitle>
+            <CardDescription>Distribution of AI models used for demand predictions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-3">
+              {Object.entries(modelDistribution).map(([model, count]) => (
+                <div key={model} className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
+                  <div>
+                    <p className="font-medium text-sm capitalize">{model.replace(/_/g, ' ')}</p>
+                    <p className="text-xs text-muted-foreground">{count} SKUs</p>
+                  </div>
+                  <Badge variant="secondary">{((count / activeRecommendations.length) * 100).toFixed(0)}%</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BrainCircuit className="h-5 w-5" />
-            Live API Test: ROP Calculator
+            Live API Test: ROP Calculator with Time Series Forecasting
           </CardTitle>
           <CardDescription>
-            Use this to test the connection to your live Python backend (http://127.0.0.1:5000)
+            Test individual SKU forecasts and see detailed model output
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -197,7 +239,7 @@ export default function Reorder() {
             </div>
           </div>
           <Button onClick={handleCalculateRop} disabled={isApiTestLoading}>
-            {isApiTestLoading ? "Calculating..." : "Calculate ROP"}
+            {isApiTestLoading ? "Calculating..." : "Calculate ROP with AI Forecast"}
           </Button>
 
           {apiResult && (
@@ -209,19 +251,17 @@ export default function Reorder() {
         </CardContent>
       </Card>
 
-      {/* Recommendations List (now shows REAL data) */}
       <Card>
         <CardHeader>
           <CardTitle>Active Recommendations ({activeRecommendations.length})</CardTitle>
-          <CardDescription>Sorted by priority and (now loaded from your live backend)</CardDescription>
+          <CardDescription>Sorted by priority with AI-generated demand forecasts</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* 7. ADDED Loading and Error states */}
           {isPageLoading ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">Loading Recommendations...</h3>
-              <p className="text-muted-foreground">Connecting to the Python backend...</p>
+              <p className="text-muted-foreground">Running time series models on historical data...</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -229,7 +269,7 @@ export default function Reorder() {
               <h3 className="text-lg font-semibold text-destructive mb-2">Connection Error</h3>
               <p className="text-muted-foreground">Could not load data: {error}</p>
               <p className="text-muted-foreground mt-2">
-                Please make sure your Python backend is running at `http://127.0.0.1:5000`.
+                Please make sure your Python backend is running at http://127.0.0.1:5000
               </p>
             </div>
           ) : activeRecommendations.length === 0 ? (
@@ -240,7 +280,6 @@ export default function Reorder() {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* 8. This .map() now uses REAL data */}
               {activeRecommendations.map((rec) => (
                 <div
                   key={rec.skuId}
@@ -251,7 +290,7 @@ export default function Reorder() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
                         <h3 className="font-semibold text-lg text-foreground">{rec.skuName}</h3>
                         <Badge
                           variant="outline"
@@ -263,6 +302,12 @@ export default function Reorder() {
                         >
                           {rec.priority} priority
                         </Badge>
+                        {rec.modelUsed && (
+                          <Badge variant="secondary" className="gap-1">
+                            <BrainCircuit className="h-3 w-3" />
+                            {rec.modelUsed.replace(/_/g, ' ')}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground mb-3">{rec.skuId}</p>
 
@@ -284,6 +329,47 @@ export default function Reorder() {
                           <p className="text-base font-semibold text-foreground">{rec.leadTime} days</p>
                         </div>
                       </div>
+
+                      {(rec.forecastAccuracy || rec.forecastedDemand7d) && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 p-3 rounded-lg bg-muted/30">
+                          {rec.forecastAccuracy !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <Target className="h-4 w-4 text-primary" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">Accuracy</p>
+                                <p className="text-sm font-semibold text-primary">{rec.forecastAccuracy.toFixed(1)}%</p>
+                              </div>
+                            </div>
+                          )}
+                          {rec.forecastedDemand7d !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <TrendingUp className="h-4 w-4 text-success" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">7-Day Forecast</p>
+                                <p className="text-sm font-semibold">{Math.round(rec.forecastedDemand7d)} units</p>
+                              </div>
+                            </div>
+                          )}
+                          {rec.forecastedDemand14d !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <TrendingUp className="h-4 w-4 text-warning" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">14-Day Forecast</p>
+                                <p className="text-sm font-semibold">{Math.round(rec.forecastedDemand14d)} units</p>
+                              </div>
+                            </div>
+                          )}
+                          {rec.forecastedDemand30d !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <TrendingUp className="h-4 w-4 text-blue-500" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">30-Day Forecast</p>
+                                <p className="text-sm font-semibold">{Math.round(rec.forecastedDemand30d)} units</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {rec.estimatedStockoutDate && (
                         <div className="flex items-center gap-2 text-sm text-destructive mb-3">
